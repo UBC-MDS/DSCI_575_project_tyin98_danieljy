@@ -10,20 +10,27 @@ def tokenize(text):
     return text.split()
 
 
-def build_and_save_index(data_path, output_dir):
-    data_path = Path(data_path)
+def build_and_save_index(output_dir):
+    #data_path = Path(data_path)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("Loading data from json...")
-    products = []
-    with open(data_path, "r") as f:
-        for line in f:
-            if line.strip():
-                products.append(json.loads(line))
-    print(f"Loaded {len(products)} products")
+    #print("Loading data from json...")
+    #products = []
+    #with open(data_path, "r") as f:
+    #    for line in f:
+    #        if line.strip():
+    #            products.append(json.loads(line))
+    #print(f"Loaded {len(products)} products")
+    
+    print("Loading pickled products...")
+    products = None
+    with open(output_dir / "products.pkl", "rb") as f:
+        products = pickle.load(f)
+    if not products:
+        print("products.pkl not found. Run semantic.py first.")
 
-    print("Tokenizing related fields...")
+    print("Tokenizing corpus...")
     corpus = []
     for product in products:
         parts = [product.get("title", "")]
@@ -70,7 +77,7 @@ if __name__ == "__main__":
     output_dir=project_root / "data" / "processed"
 
     if not (output_dir / "bm25_index.pkl").exists():
-        build_and_save_index(data_path, output_dir)
+        build_and_save_index(output_dir)
 
     bm25_index, products = load_index(project_root / "data" / "processed")
     results = search("digital piano hammer action", bm25_index, products, top_k=10)
