@@ -32,7 +32,7 @@ def review_matching(review_path, k=3):
             else:
                 heapq.heappushpop(heap, (votes, text))
     return top_reviews_dict
-    
+
 def build_corpus_index(meta_path, review_path, output_dir, k=3, max_products=None):
 
     reviews_dict = review_matching(review_path, k)
