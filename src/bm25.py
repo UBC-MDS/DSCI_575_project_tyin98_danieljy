@@ -3,13 +3,19 @@ import pickle
 import re
 from pathlib import Path
 from rank_bm25 import BM25Okapi
-import spacy
 from tqdm import tqdm
+from nltk.stem import SnowballStemmer
+from nltk.corpus import stopwords
+import nltk
 
-nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
+nltk.download('stopwords', quiet=True)
+stop_words = set(stopwords.words('english'))
+stemmer = SnowballStemmer("english")
+
 def tokenize(text):
-    doc = nlp(text)
-    return [token.lemma_.lower() for token in doc if not token.is_stop and not token.is_punct]
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9\s-]", "", text)
+    return [stemmer.stem(w) for w in text if w not in stop_words]
 
 
 def build_and_save_index(output_dir):
