@@ -119,7 +119,7 @@ if __name__ == "__main__":
         build_corpus_index(meta_path, review_path, output_dir)
 
     vector_store = load_faiss_index(index_path)
-    results = semantic_search("digital piano hammer action", vector_store, k=10)
+    results = semantic_search("guitar for 6 years old", vector_store, k=10)
     for doc, score in results:
         print(f"Score: {score:.4f}, Product: {doc}")
     
