@@ -84,7 +84,7 @@ Reviews: {reviews}
     print(f"Using device: {model.device}")
     print("Running this on the full dataset could take hours if you don't have CUDA/MPS.")
     print("Adjust batch size according to RAM/VRAM, and use --max-products to limit amount of products processed")
-    embeddings = model.encode(corpus, batch_size=256, show_progress_bar=True)
+    embeddings = model.encode(corpus, batch_size=256, show_progress_bar=True, normalize_embeddings=True)
 
     print("pickling generated embeddings...")
     with open(output_dir / "embeddings.pkl", "wb") as f:
