@@ -19,11 +19,28 @@ stop_words = set(stopwords.words('english'))
 stemmer = SnowballStemmer("english")
 
 def tokenize(text):
+    """Lowercase, strip punctuation, remove stop-words, and stem.
+
+    Args:
+        text: Raw text string
+
+    Returns:
+        A list of tokens
+    """
     text = text.lower()
     text = re.sub(r"[^a-z0-9\s-]", "", text)
     return [stemmer.stem(w) for w in text if w not in stop_words]
 
 def review_matching(review_path, k=3):
+    """Reads a JSON review file and keeps the k reviews with the most helpful votes per product.
+
+    Args:
+        review_path: Path to the reviews JSON file.
+        k: Number of most helpful reviews to keep per product, default 3
+
+    Returns:
+        A dict mapping parent_asin to a list of (votes, text) tuples
+    """
     print(f"Filtering top {k} helpful reviews for all products...")
     top_reviews_dict = defaultdict(list)
     with open(review_path, "r") as f:
@@ -49,7 +66,17 @@ def review_matching(review_path, k=3):
     return top_reviews_dict
 
 def build_corpus_index(meta_path, review_path, output_dir, k=3, max_products=None):
+    """Loads product metadata and reviews, creates a corpus containing title, features, 
+    description, and top reviews, encodes the corpus with all-MiniLM-L6-v2, and saves
+    everything as pickle files plus a built FAISS index.
 
+    Args:
+        meta_path: Path to the product metadata JSON file.
+        review_path: Path to the reviews JSON file.
+        output_dir: Directory where pickle files and the FAISS index will be saved.
+        k: Number of top reviews per product, default 3.
+        max_products: If set, only process the first n products.
+    """
     reviews_dict = review_matching(review_path, k)
 
     print("Loading data from json...")
@@ -95,6 +122,13 @@ Reviews: {reviews}
     return
 
 def build_faiss_index(corpus, embeddings, output_dir):
+    """Create and save a FAISS vector store from corpus text and embeddings.
+
+    Args:
+        corpus: List of strings.
+        embeddings: Generated embedding vectors.
+        output_dir: Directory where the FAISS index will be saved.
+    """
     print(f"Building FAISS index...")
     embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     vector_store = FAISS.from_embeddings(
@@ -108,7 +142,12 @@ def build_faiss_index(corpus, embeddings, output_dir):
     return
 
 def build_bm25_index(output_dir):
-    #data_path = Path(data_path)
+    """Loads products.pkl, tokenizes each product's title, features, and description, then creates a BM25 index.
+    Saves the index and tokenized corpus to disk.
+
+    Args:
+        output_dir: Directory containing products.pkl and where bm25_index.pkl and corpus.pkl will be saved.
+    """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 

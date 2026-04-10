@@ -3,8 +3,16 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 import argparse
 
-def load_faiss_index(index_path):
 
+def load_faiss_index(index_path):
+    """Load a FAISS vector store from disk.
+
+    Args:
+        index_path: Path to the directory containing the saved FAISS index files.
+
+    Returns:
+        A FAISS vector store
+    """
     print(f"Loading FAISS index from {index_path}...")
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     vector_store = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
@@ -13,6 +21,16 @@ def load_faiss_index(index_path):
 
 
 def semantic_search(query, vector_store, k=10):
+    """Return the vector store document for the most similar search results
+
+    Args:
+        query: The query to search for.
+        vector_store: A FAISS vector store.
+        k: Number of top results to return, default 10.
+
+    Returns:
+        A list of (page_content, score) tuples sorted by descending relevance.
+    """
     results = vector_store.similarity_search_with_score(query, k)
     return [(doc.page_content, score) for doc, score in results]
 

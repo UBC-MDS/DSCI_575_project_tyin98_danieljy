@@ -4,7 +4,16 @@ from pathlib import Path
 from rank_bm25 import BM25Okapi
 from utils import tokenize
 
+
 def load_index(input_dir):
+    """Load the BM25 index and product list from disk.
+
+    Args:
+        input_dir: Path to the directory containing bm25_index.pkl and products.pkl.
+
+    Returns:
+        A tuple of (bm25_index, list[products dicts])
+    """
     input_dir = Path(input_dir)
     with open(input_dir / "bm25_index.pkl", "rb") as f:
         bm25_index = pickle.load(f)
