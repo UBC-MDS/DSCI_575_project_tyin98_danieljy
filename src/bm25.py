@@ -3,11 +3,13 @@ import pickle
 import re
 from pathlib import Path
 from rank_bm25 import BM25Okapi
+import spacy
+from tqdm import tqdm
 
+nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
 def tokenize(text):
-    text = text.lower()
-    text = re.sub(r"[^a-z0-9\s-]", "", text)
-    return text.split()
+    doc = nlp(text)
+    return [token.lemma_.lower() for token in doc if not token.is_stop and not token.is_punct]
 
 
 def build_and_save_index(output_dir):
@@ -30,9 +32,8 @@ def build_and_save_index(output_dir):
     if not products:
         print("products.pkl not found. Run semantic.py first.")
 
-    print("Tokenizing corpus...")
     corpus = []
-    for product in products:
+    for product in tqdm(products, desc = "Tokenizing corpus"):
         parts = [product.get("title", "")]
         parts.extend(product.get("features", []))
         parts.extend(product.get("description", []))
@@ -47,7 +48,7 @@ def build_and_save_index(output_dir):
     with open(output_dir / "corpus.pkl", "wb") as f:
         pickle.dump(corpus, f)
     #with open(output_dir / "products.pkl", "wb") as f: # we also pickle this so we don't have to load the json every time
-    #    pickle.dump(products, f)
+    #    pickle.dump(products, f)   
 
     print(f"Saved pickle files to {output_dir}")
 
