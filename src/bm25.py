@@ -80,7 +80,7 @@ def search(query, bm25_index, products, top_k=10):
 
 if __name__ == "__main__":
     project_root = Path(__file__).parent.parent
-    data_path=project_root / "data" / "raw" / "meta_Musical_Instruments.jsonl"
+    #data_path=project_root / "data" / "raw" / "meta_Musical_Instruments.jsonl"
     output_dir=project_root / "data" / "processed"
 
     if not (output_dir / "bm25_index.pkl").exists():

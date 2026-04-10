@@ -6,6 +6,7 @@ from langchain_community.vectorstores import FAISS
 import json
 import heapq
 import pickle
+import argparse
 
 def review_matching(review_path, k=3):
     print(f"Filtering top {k} helpful reviews for all products...")
@@ -32,7 +33,7 @@ def review_matching(review_path, k=3):
                 heapq.heappushpop(heap, (votes, text))
     return top_reviews_dict
     
-def build_corpus_index(meta_path, review_path, output_dir, k=3):
+def build_corpus_index(meta_path, review_path, output_dir, k=3, max_products=None):
 
     reviews_dict = review_matching(review_path, k)
 
@@ -42,6 +43,8 @@ def build_corpus_index(meta_path, review_path, output_dir, k=3):
         for line in f:
             if line.strip():
                 products.append(json.loads(line))
+                if max_products and len(products) >= max_products:
+                    break
     print(f"Loaded {len(products)} products")
 
     print("Building corpus...")
@@ -64,8 +67,8 @@ Reviews: {reviews}
     model = SentenceTransformer("all-MiniLM-L6-v2")
     print("Generating embeddings...")
     print(f"Using device: {model.device}")
-    print("This could take hours if you don't have CUDA/MPS.")
-    print("Adjust batch size according to RAM/VRAM")
+    print("Running this on the full dataset could take hours if you don't have CUDA/MPS.")
+    print("Adjust batch size according to RAM/VRAM, and use --max-products to limit amount of products processed")
     embeddings = model.encode(corpus, batch_size=256, show_progress_bar=True)
 
     print("pickling generated embeddings...")
@@ -109,14 +112,18 @@ def semantic_search(query, vector_store, k=10):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--max-products", type=int, default=None)
+    args = parser.parse_args()
+
     project_root = Path(__file__).parent.parent
     meta_path= project_root / "data" / "raw" / "meta_Musical_Instruments.jsonl"
     review_path= project_root / "data" / "raw" / "Musical_Instruments.jsonl"
     output_dir=project_root / "data" / "processed"
     index_path = output_dir / "faiss_index"
-    
+
     if not (index_path / "index.faiss").exists():
-        build_corpus_index(meta_path, review_path, output_dir)
+        build_corpus_index(meta_path, review_path, output_dir, max_products=args.max_products)
 
     vector_store = load_faiss_index(index_path)
     results = semantic_search("guitar for 6 years old", vector_store, k=10)
