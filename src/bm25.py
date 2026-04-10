@@ -39,8 +39,8 @@ def build_and_save_index(data_path, output_dir):
         pickle.dump(bm25_index, f)
     with open(output_dir / "corpus.pkl", "wb") as f:
         pickle.dump(corpus, f)
-    with open(output_dir / "products.pkl", "wb") as f: # we also pickle this so we don't have to load the json every time
-        pickle.dump(products, f)
+    #with open(output_dir / "products.pkl", "wb") as f: # we also pickle this so we don't have to load the json every time
+    #    pickle.dump(products, f)
 
     print(f"Saved pickle files to {output_dir}")
 
@@ -66,11 +66,13 @@ def search(query, bm25_index, products, top_k=10):
 
 if __name__ == "__main__":
     project_root = Path(__file__).parent.parent
-    build_and_save_index(
-        data_path=project_root / "data" / "raw" / "meta_Musical_Instruments.jsonl",
-        output_dir=project_root / "data" / "processed"
-    )
+    data_path=project_root / "data" / "raw" / "meta_Musical_Instruments.jsonl"
+    output_dir=project_root / "data" / "processed"
+
+    if not (output_dir / "bm25_index.pkl").exists():
+        build_and_save_index(data_path, output_dir)
+
     bm25_index, products = load_index(project_root / "data" / "processed")
     results = search("digital piano hammer action", bm25_index, products, top_k=10)
     for product, score in results:
-        print(f"Score: {score:.4f}, Product: {product['title']}")
+        print(f"Score: {score:.4f}, Product: {product}")
