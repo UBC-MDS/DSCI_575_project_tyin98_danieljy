@@ -51,5 +51,10 @@ if __name__ == "__main__":
     vector_store = load_faiss_index(index_path)
     results = semantic_search(args.query, vector_store, args.k)
     for doc, score in results:
-        print(f"Score: {score:.4f}, Product: {doc}")
+        print(f"""
+
+
+Score: {score:.4f}
+--------------------------------------
+Product: {doc.replace('|', '\n--------------------------------------')}""")
     

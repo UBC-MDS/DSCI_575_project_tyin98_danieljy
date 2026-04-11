@@ -8,6 +8,6 @@
 
 -   Run `python src/semantic.py -q "your search query" -k 10` to perform a test search of top 10 matching products using semantic search.
 
--   Run `python src/bm25.py``-q "your search query" -k 10` to perform a test search of top 10 matching products using BM25 search.
+-   Run ``` python src/bm25.py``-q "your search query" -k 10 ``` to perform a test search of top 10 matching products using BM25 search.
 
 Some design choices: Semantic search included the reviews as part of the corpus but not BM25 because with basic keyword matching including the review might skew the model too much. We sorted the reviews by helpful_vote and only kept the good reviews (rating \>= 3).

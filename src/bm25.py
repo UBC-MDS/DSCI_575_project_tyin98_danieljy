@@ -48,4 +48,14 @@ if __name__ == "__main__":
     bm25_index, products = load_index(project_root / "data" / "processed")
     results = search(args.query, bm25_index, products, args.k)
     for product, score in results:
-        print(f"Score: {score:.4f}, Product: {product}")
+        print(f"""
+
+
+Score: {score:.4f}
+Product title: {product['title']}
+--------------------------------------
+Description: {product['description']}
+--------------------------------------
+Features: {product['features']}
+--------------------------------------
+Reviews: {product['reviews']}""")

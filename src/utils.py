@@ -1,9 +1,10 @@
 import argparse
-import json
 import heapq
 import pickle
 import re
 import nltk
+import pandas as pd
+import numpy as np
 from nltk.stem import SnowballStemmer
 from nltk.corpus import stopwords
 from collections import defaultdict
@@ -29,64 +30,57 @@ def tokenize(text):
     """
     text = text.lower()
     text = re.sub(r"[^a-z0-9\s-]", "", text)
-    return [stemmer.stem(w) for w in text if w not in stop_words]
+    return [stemmer.stem(w) for w in text.split() if w not in stop_words]
 
 def review_matching(review_path, k=3):
-    """Reads a JSON review file and keeps the k reviews with the most helpful votes per product.
+    """Reads a parquet review file and keeps the k reviews with the most helpful votes per product.
 
     Args:
-        review_path: Path to the reviews JSON file.
+        review_path: Path to the reviews parquet file.
         k: Number of most helpful reviews to keep per product, default 3
 
     Returns:
         A dict mapping parent_asin to a list of (votes, text) tuples
     """
     print(f"Filtering top {k} helpful reviews for all products...")
+    df = pd.read_parquet(review_path)
+
     top_reviews_dict = defaultdict(list)
-    with open(review_path, "r") as f:
-        for line in f:
-            if not line.strip(): continue
-            review = json.loads(line)
-            # filter out low quality reviews
-            if not review.get('verified_purchase', False): continue
-            if review.get('rating', 0) < 3.0: continue
-            text = f'{review.get('title', '')}: {review.get('text', '')}'
-            if not text: continue
-            if len(text) < 50 or len(text) > 300: continue
-
-            asin = review['parent_asin']
-            votes = review.get('helpful_vote', 0)
-
-            # min heap to keep top k reviews
-            heap = top_reviews_dict[asin]            
-            if len(heap) < k:
-                heapq.heappush(heap, (votes, text))
-            else:
-                heapq.heappushpop(heap, (votes, text))
+    for _, row in df.iterrows():
+        asin = row['parent_asin']
+        votes = row.get('helpful_vote', 0)
+        # min heap to keep top k reviews
+        heap = top_reviews_dict[asin]
+        if len(heap) < k:
+            heapq.heappush(heap, (votes, row['text']))
+        else:
+            heapq.heappushpop(heap, (votes, row['text']))
     return top_reviews_dict
 
 def build_corpus_index(meta_path, review_path, output_dir, k=3, max_products=None):
-    """Loads product metadata and reviews, creates a corpus containing title, features, 
+    """Loads product metadata and reviews, creates a corpus containing title, features,
     description, and top reviews, encodes the corpus with all-MiniLM-L6-v2, and saves
     everything as pickle files plus a built FAISS index.
 
     Args:
-        meta_path: Path to the product metadata JSON file.
-        review_path: Path to the reviews JSON file.
+        meta_path: Path to the product metadata parquet file.
+        review_path: Path to the reviews parquet file.
         output_dir: Directory where pickle files and the FAISS index will be saved.
         k: Number of top reviews per product, default 3.
         max_products: If set, only process the first n products.
     """
     reviews_dict = review_matching(review_path, k)
 
-    print("Loading data from json...")
-    products = []
-    with open(meta_path, "r") as f:
-        for line in f:
-            if line.strip():
-                products.append(json.loads(line))
-                if max_products and len(products) >= max_products:
-                    break
+    print("Loading data from parquet...")
+    df = pd.read_parquet(meta_path)
+    if max_products:
+        df = df.head(max_products)
+    products = df.to_dict('records')
+    for p in products:
+        if isinstance(p.get('features'), np.ndarray):
+            p['features'] = p['features'].tolist()
+        if isinstance(p.get('description'), np.ndarray):
+            p['description'] = p['description'].tolist()
     print(f"Loaded {len(products)} products")
 
     print("Building corpus...")
@@ -151,14 +145,6 @@ def build_bm25_index(output_dir):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    #print("Loading data from json...")
-    #products = []
-    #with open(data_path, "r") as f:
-    #    for line in f:
-    #        if line.strip():
-    #            products.append(json.loads(line))
-    #print(f"Loaded {len(products)} products")
-    
     print("Loading pickled products...")
     products = None
     with open(output_dir / "products.pkl", "rb") as f:
@@ -193,8 +179,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     project_root = Path(__file__).parent.parent
-    meta_path= project_root / "data" / "raw" / "meta_Musical_Instruments.jsonl"
-    review_path= project_root / "data" / "raw" / "Musical_Instruments.jsonl"
+    meta_path= project_root / "data" / "processed" / "filtered_meta.parquet"
+    review_path= project_root / "data" / "processed" / "filtered_reviews.parquet"
     output_dir=project_root / "data" / "processed"
     index_path = output_dir / "faiss_index"
 
