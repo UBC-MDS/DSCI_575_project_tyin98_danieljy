@@ -22,7 +22,7 @@ def load_index(input_dir):
     return bm25_index, products
 
 
-def search(query, bm25_index, products, top_k=10):
+def bm25_search(query, bm25_index, products, top_k=10):
     """
     Return list of (product, score) sorted by score descending
     """
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         exit(1)
 
     bm25_index, products = load_index(project_root / "data" / "processed")
-    results = search(args.query, bm25_index, products, args.k)
+    results = bm25_search(args.query, bm25_index, products, args.k)
     for product, score in results:
         print(f"""
 
