@@ -125,9 +125,11 @@ def build_faiss_index(corpus, embeddings, output_dir):
     """
     print(f"Building FAISS index...")
     embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    metadatas = [{"index": i} for i in range(len(corpus))]
     vector_store = FAISS.from_embeddings(
         text_embeddings=list(zip(corpus, embeddings)),
-        embedding=embedding_model
+        embedding=embedding_model,
+        metadatas=metadatas
     )
 
     print(f"Saving FAISS index...")
