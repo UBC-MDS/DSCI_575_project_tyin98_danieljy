@@ -16,10 +16,11 @@ conda activate dsci575_td
 ```bash
 python src/utils.py --rebuild --max-products 5000
 ```
-4. Run the Streamlit App locally.
+4. Run the Streamlit App locally. Click on the URL within the terminal if the window does not open automatically. 
 ```bash
 streamlit run app/app.py
 ```
+5. Within the app, select whether you want the BM25 or Semantic Search Model. Then, type your query in the search-bar.
 
 ## Authors
 - Daniel Yorke
