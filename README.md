@@ -16,7 +16,7 @@ Raw data is streamed directly from the Amazon Reviews 2023 dataset (Musical Inst
 
 2. Filtering & Cleaning (notebook → data/processed/)
 
-- Reviews are filtered to keep only: Ratings > 3/5, verified purchases, and review text between 50–300 words for higher quality output.Revie
+- Reviews are filtered to keep only: Ratings > 3/5, verified purchases, and review text between 50–300 words for higher quality output.
 - Reviews and Metadata files are converted to parquet files and then downsampled to allow upload to Github repo. 
   
 3. Index Building (utils.py)
@@ -40,7 +40,7 @@ Both scripts load their respective indexes and accept a --query and --k argument
 
 1. Clone the repo to your local device
 ```bash
-git clone https://github.com/UBC-MDS/DSCI_575_project_tyin98_danieljy
+git clone git@github.com:UBC-MDS/DSCI_575_project_tyin98_danieljy.git
 cd DSCI_575_project_tyin98_danieljy
 ```
 2. Create the environment to run the app
