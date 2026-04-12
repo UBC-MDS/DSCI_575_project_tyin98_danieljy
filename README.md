@@ -1,6 +1,33 @@
 # DSCI 575 Group Project
 This App is designed to help musical enthusiasts find the most appropriate suggestions for shopping on Amazon. 
 
+## Dataset Description
+This is a large-scale Amazon Reviews dataset collected in 2023 by McAuley Lab, and it includes rich features such as:
+- User Reviews (ratings, text, helpfulness votes, etc.)
+- Item Metadata (descriptions, price, raw image, etc.)
+- Links (user-item / bought together graphs).
+Data was retrieved from ![here](https://amazon-reviews-2023.github.io/). 
+
+## Data Processing / Model Workflow
+1. Data Acquisition (milestone1_exploration.ipynb)
+Raw data is streamed directly from the Amazon Reviews 2023 dataset (Musical Instruments category) using DuckDB — no full download required. This yields two sources: product metadata and user reviews.
+2. Filtering & Cleaning (notebook → data/processed/)
+- Reviews are filtered to keep only: Ratings > 3/5, verified purchases, and review text between 50–300 words for higher quality output.Revie
+- Reviews and Metadata files are converted to parquet files and then downsampled to allow upload to Github repo. 
+  
+1. Index Building (utils.py)
+Run utils.py to build both search indexes from the filtered parquets:
+
+- Corpus construction: For each product, title + features + description + top-3 most helpful reviews are concatenated into a single text document.
+- Semantic index (FAISS): The corpus is encoded with all-MiniLM-L6-v2 (SentenceTransformers) and stored in a FAISS vector store (data/processed/faiss_index/).
+- BM25 index: Each product's title, features, and description are lowercased, stripped of punctuation, stopword-filtered, and stemmed (Snowball), then indexed with BM25Okapi and pickled to data/processed/bm25_index.pkl.
+- Products are also saved as products.pkl for retrieval at query time.
+
+4. Search (bm25.py / semantic.py)
+Both scripts load their respective indexes and accept a --query and --k argument:
+- bm25.py tokenizes the query identically to the index and returns the top-k products by BM25 score (higher = better).
+- semantic.py embeds the query with all-MiniLM-L6-v2 and returns top-k products by FAISS cosine similarity (lower score = better, as FAISS returns L2 distance on normalized vectors).
+
 ## Getting Started
 1. Clone the repo to your local device
 ```bash
