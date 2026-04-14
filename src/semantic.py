@@ -23,7 +23,12 @@ def load_faiss_index(index_path, data_dir):
 
     return vector_store, products
 
-def semantic_search(query, vector_store, products, k=10):
+def semantic_retriever(query, vector_store, k):
+    """Return list of original index of the products, sorted by score ascending"""
+    results = vector_store.similarity_search_with_score(query, k)
+    return [(doc.metadata["index"], score) for doc, score in results]
+
+def semantic_search(query, vector_store, products, k=5):
     """Return list of (product, score) sorted by score ascending
 
     Args:
@@ -35,8 +40,8 @@ def semantic_search(query, vector_store, products, k=10):
     Returns:
         A list of (product_dict, score) tuples.
     """
-    results = vector_store.similarity_search_with_score(query, k)
-    return [(products[doc.metadata["index"]], float(score)) for doc, score in results]
+    indices = semantic_retriever(query, vector_store, k)
+    return [(products[i], float(score)) for i, score in indices]
 
 
 if __name__ == "__main__":

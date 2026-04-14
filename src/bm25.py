@@ -21,15 +21,18 @@ def load_index(input_dir):
         products = pickle.load(f)
     return bm25_index, products
 
+def bm25_retriever(query, bm25_index, k=10):
+    tokenized_query = tokenize(query)
+    scores = bm25_index.get_scores(tokenized_query)
+    ranked_idx = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
+    return ranked_idx, scores
 
 def bm25_search(query, bm25_index, products, top_k=10):
     """
     Return list of (product, score) sorted by score descending
     """
-    tokenized_query = tokenize(query)
-    scores = bm25_index.get_scores(tokenized_query)
-    ranked_idx = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
-    return [(products[i], scores[i]) for i in ranked_idx]
+    ranked_idx, scores = bm25_retriever(query, bm25_index, top_k)
+    return [(products[i], float(score)) for i, score in zip(ranked_idx, scores)]
 
 
 if __name__ == "__main__":
