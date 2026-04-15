@@ -1,13 +1,18 @@
 from semantic import semantic_retriever, load_faiss_index
 import argparse
+import os
 from pathlib import Path
+from prompts import build_prompt
+from dotenv import load_dotenv
+load_dotenv()
+from langchain_groq import ChatGroq
 
 class RAG_Pipeline:
     def __init__(self, vector_store , products):
         self.vector_store = vector_store
         self.products = products
 
-    def retrieve(self, query, k=5):
+    def retrieve(self, query, k=10):
         return [idx for idx, score in semantic_retriever(query, self.vector_store, k)]
 
     def build_context(self, docs):
@@ -24,6 +29,30 @@ class RAG_Pipeline:
             )
             context_parts.append(part)
         return "\n\n".join(context_parts)
+
+    def query(self, query, k=10):
+        # the function that runs the entire RAG pipeline
+        if "GROQ_API_KEY" not in os.environ:
+            print("GROQ_API_KEY not found. Please add it in the .env file.")
+            exit(1) 
+
+        llm = ChatGroq(
+            model="qwen/qwen3-32b",
+            temperature=1,
+            max_tokens=None,
+            reasoning_format="parsed",
+            timeout=None,
+            max_retries=2,
+        )
+
+        docs = self.retrieve(query, k)
+        context = self.build_context(docs)
+        prompt = build_prompt(query, context)
+        
+        return llm.invoke(prompt).content
+
+        
+        
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -43,7 +72,6 @@ if __name__ == "__main__":
     vector_store, products= load_faiss_index(index_path, data_dir)
 
     pipeline = RAG_Pipeline(vector_store, products)
-    docs = pipeline.retrieve(args.query, args.k)
-    print(pipeline.build_context(docs))
+    print(pipeline.query(args.query, args.k))
     
         
