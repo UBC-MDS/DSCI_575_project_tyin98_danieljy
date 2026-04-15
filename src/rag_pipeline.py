@@ -20,7 +20,7 @@ class RAG_Pipeline:
         for idx in docs:
             product = self.products[idx]
             part = (
-                f"ID: {idx}\n"
+                f"ASIN: {product.get('parent_asin', '')}\n"
                 f"Title: {product.get('title', '')}\n"
                 f"Rating: {product.get('average_rating', 'N/A')}/5\n"
                 f"Description: {product.get('description', '')}\n"
@@ -49,7 +49,7 @@ class RAG_Pipeline:
         context = self.build_context(docs)
         prompt = build_prompt(query, context)
         
-        return llm.invoke(prompt).content
+        return llm.invoke(prompt).content, docs
 
         
         

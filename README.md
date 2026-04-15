@@ -52,11 +52,15 @@ conda activate dsci575_td
 ```bash
 python src/utils.py --rebuild --max-products 5000
 ```
-4. Run the Streamlit App locally. Click on the URL within the terminal if the window does not open automatically. 
+
+4. The RAG pipeline requires a Groq API key. Add it to your .env file with `GROQ_API_KEY=your_api_key`.
+
+5. Run the Streamlit App locally. Click on the URL within the terminal if the window does not open automatically. 
 ```bash
 streamlit run app/app.py
 ```
-5. Within the app, select whether you want the BM25 or Semantic Search Model. Then, type your query in the search-bar.
+
+6. Within the app, select whether you want the BM25 or Semantic Search model for regular search or the RAG tab for LLM assisted search. Then, type your query in the search-bar.
 
 ## Authors
 - Daniel Yorke

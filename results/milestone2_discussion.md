@@ -13,3 +13,7 @@ Another strong contender is kimi-k2-instruct, which will likely have better perf
 In this step, we compared 3 different system prompts (see `milestone2_rag.ipynb`). The first one we tried is the most basic prompt with no extra designs. Even this version performed well and we didn't see any hallucinations. The second prompt is a variation of the first version with some anti-hallucination prompt. Even when the first version did not show any hallucinations, this version do seem to perform better, being slightly more concise. The last prompt is a slightly different task (explicitly ranking the top 3 products) with prompts for structured output. The model we choose seems to be able to consistently follow this structure, so this is the version we will be using in the pipeline.
 
 We decided to use a k of 10. Selecting the best from the top 10 gives us a good chance of finding what we want. Including too few products could make us miss the best option, while including too many products could fill up the context window, be more expensive to run, and make the model confused.
+
+### A note on RAG search result ordering
+
+In the web app, the best option ranked by the LLM is not at the top of the retrieved products. This can be counterintuitive for the users but is by design. The retrieved products are ordered based on the semantic search scores, by keeping the RAG ranked products at their original position, we highlight the difference between relying only on semantic search and the RAG approach.
