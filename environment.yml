@@ -11,6 +11,8 @@ dependencies:
   - pip:
     - sentence-transformers>=2.2
     - langchain-community>=0.0.27
+    - langchain-groq>=0.1.0
     - rank-bm25>=0.2
     - streamlit>=1.18
     - faiss-cpu>=1.7
+    - python-dotenv>=1.0
