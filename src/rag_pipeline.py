@@ -38,7 +38,7 @@ class RAG_Pipeline:
 
         llm = ChatGroq(
             model="qwen/qwen3-32b",
-            temperature=1,
+            temperature=0.3,
             max_tokens=None,
             reasoning_format="parsed",
             timeout=None,
