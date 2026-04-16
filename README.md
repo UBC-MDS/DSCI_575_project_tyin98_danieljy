@@ -62,6 +62,34 @@ streamlit run app/app.py
 
 6. Within the app, select whether you want the BM25 or Semantic Search model for regular search or the RAG tab for LLM assisted search. Then, type your query in the search-bar.
 
+## RAG Pipeline Workflow
+
+```mermaid
+graph TD
+    subgraph Indexing ["Indexing"]
+        RawData[Raw Data] --> ReviewMatch[Review Matching]
+        ReviewMatch -->Corpus[Corpus Construction]
+        RawData --> Corpus
+        Corpus -->Transformer[Sentence Transformer]
+        Transformer -->FAISS[FAISS Index]
+        Corpus -->Products[products.pkl]
+        Corpus -->BM25[BM25 Index]
+    end
+
+    subgraph RAG ["RAG"]
+        Query[Query] --> TransformerQ[Query Embedding]
+        TransformerQ -->Retriever[Semantic Retriever]
+        Retriever -->Context[Context Construction]
+        Products --> Context
+        Context -->Prompt[Prompt Construction]
+        Query --> Prompt
+        Prompt -->LLM[Groq: Qwen 32B]
+        LLM --> Response[Final Answer]
+    end
+
+    FAISS --> Retriever
+```
+
 ## Authors
 - Daniel Yorke
 - Tiantong Yin 
