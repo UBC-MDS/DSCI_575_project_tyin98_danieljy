@@ -40,14 +40,10 @@ class HybridRetriever:
         """
 
         # --- Step 1: Run both retrievers independently ---
-        # semantic_retriever returns [(product_idx, l2_distance), ...]  lower distance = better
-        # bm25_retriever returns (ranked_indices_list, scores_array)     higher score = better
         semantic_results = semantic_retriever(query, self.vector_store, k)
         bm25_indices, _ = bm25_retriever(query, self.bm25_index, k)
 
         # --- Step 2: Build rank lookup dicts (rank 1 = best) ---
-        # We only care about position in the list, not the raw score value.
-        # enumerate gives us 0-based positions, so we add 1 to start ranks at 1.
         semantic_ranks = {
             product_idx: rank + 1
             for rank, (product_idx, _score) in enumerate(semantic_results)
@@ -102,7 +98,6 @@ def load_indexes(data_dir, index_path):
 
 if __name__ == "__main__":
     # CLI entry point for quick manual testing, e.g.:
-    #   python src/hybrid.py -q "moisturizing shampoo for curly hair" -k 5
 
     project_root = Path(__file__).parent.parent
     data_dir = project_root / "data" / "processed"
