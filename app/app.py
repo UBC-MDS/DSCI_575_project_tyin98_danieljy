@@ -37,7 +37,7 @@ vector_store, products_sem = load_semantic()
 hybrid_retriever = load_hybrid()
 rag_pipeline = HybridRAGPipeline(hybrid_retriever)
 
-search, rag = st.tabs(["Search", "RAG"])
+search, rag = st.tabs(["Search Only", "RAG"])
 
 with search:
     method = st.radio("Search method", ["BM25", "Semantic"])
@@ -62,30 +62,32 @@ with search:
             st.divider()
 
 with rag:
-    query = st.text_input("RAG Mode")
+    query = st.text_input("RAG Query")
     if query:
-        results, docs = rag_pipeline.query(query, k=5)
-        if not results:
-            st.write("LLM API call failed. Please check your API key or internet connection and try again later.")
-        else:
-            parts = re.split(r'<rank>(.*?)</rank>', results)
-            st.write(parts[2])
-            ranks = [r.strip() for r in parts[1].split(",")]
-            st.divider()
-            for idx in docs:
-                product = hybrid_retriever.products[idx]
-                title = product.get('title', '')
-                asin = product.get('parent_asin', '')
-                rating = product.get('average_rating', 'N/A')
-                reviews = product.get("reviews", "")
-                if asin in ranks:
-                    st.success(f"Ranked by RAG to be #{ranks.index(asin) + 1}")
-                if isinstance(reviews, str):
-                    truncated = reviews[:200] + ("..." if len(reviews) > 200 else "")
-                else:
-                    truncated = str(reviews)[:200] + "..."
-                st.write(f"[{title}](http://www.amazon.com/dp/{asin}/ref=nosim)")
-                st.write(f"ASIN: {asin}")
-                st.write(f"Review: {truncated}")
-                st.write(f"Rating: {rating}")
+        with st.spinner("Thinking..."):
+            results, docs = rag_pipeline.query(query, k=5)
+            if not results:
+                st.write("LLM API call failed. Please check your API key or internet connection and try again later.")
+            else:
+                parts = re.split(r'<rank>(.*?)</rank>', results)
+                st.write(parts[2])
+                ranks = [r.strip() for r in parts[1].split(",")]
                 st.divider()
+                st.markdown("**Top product options:**")
+                for idx in docs:
+                    product = hybrid_retriever.products[idx]
+                    title = product.get('title', '')
+                    asin = product.get('parent_asin', '')
+                    rating = product.get('average_rating', 'N/A')
+                    reviews = product.get("reviews", "")
+                    if asin in ranks:
+                        st.success(f"Ranked by LLM to be #{ranks.index(asin) + 1}")
+                    if isinstance(reviews, str):
+                        truncated = reviews[:200] + ("..." if len(reviews) > 200 else "")
+                    else:
+                        truncated = str(reviews)[:200] + "..."
+                    st.write(f"[{title}](http://www.amazon.com/dp/{asin}/ref=nosim)")
+                    st.write(f"ASIN: {asin}")
+                    st.write(f"Review: {truncated}")
+                    st.write(f"⭐ {product.get('average_rating', 'N/A')} / 5")
+                    st.divider()
