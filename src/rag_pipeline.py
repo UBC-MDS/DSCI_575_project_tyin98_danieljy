@@ -49,9 +49,14 @@ class RAG_Pipeline:
             max_retries=2,
         )
 
-        search_triggers = ["price", "availability", "current", "latest", "newest", "buy", "cost"]
+        #search_triggers = ["price", "availability", "current", "latest", "newest", "buy", "cost", "cheap", "cheaper"]
         web_context = ""
-        if any(word in query.lower() for word in search_triggers):
+        #if any(word in query.lower() for word in search_triggers):
+        #    web_context = web_search.invoke(query)
+        search_flag = llm.invoke(
+            f"Does the following query indicate a need for up-to-date web search results? Query: '{query}' Answer ONLY with 'yes' or 'no'."
+        ).content.strip().lower()
+        if search_flag == "yes":
             web_context = web_search.invoke(query)
 
         docs = self.retrieve(query, k)
