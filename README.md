@@ -53,7 +53,11 @@ conda activate dsci575_td
 python src/utils.py --rebuild --max-products 5000
 ```
 
-4. The RAG pipeline requires a Groq API key. Add it to your .env file with `GROQ_API_KEY=your_api_key`.
+4. The RAG pipeline requires a Groq API key and a Tavily API key for web search capabilities. Add them to your .env file:
+```text
+GROQ_API_KEY=your_groq_key
+TAVILY_API_KEY=your_tavily_key
+```
 
 5. Run the Streamlit App locally. Click on the URL within the terminal if the window does not open automatically. 
 ```bash
@@ -61,6 +65,9 @@ streamlit run app/app.py
 ```
 
 6. Within the app, select whether you want the BM25 or Semantic Search model for regular search or the RAG tab for LLM assisted search. Then, type your query in the search-bar.
+
+## Web Search Tool Call
+The RAG pipeline have web search capability via Tavily. The pipeline uses the LLM to determine if a query requires web information. If triggered, the web results are combined with the other data for a better answer.
 
 ## RAG Pipeline Workflow
 
@@ -77,12 +84,15 @@ graph TD
     end
 
     subgraph RAG ["RAG"]
-        Query[Query] --> TransformerQ[Query Embedding]
+        Query[Query] --> LLMTrigger[LLM Search Trigger]
+        LLMTrigger --> Tavily[Tavily Web Search]
+        Query --> TransformerQ[Query Embedding]
         TransformerQ --> SemanticRetriever[Semantic Retriever]
         Query --> BM25Retriever[BM25 Retriever]
         SemanticRetriever --> RRF[Hybrid Merge - RRF]
         BM25Retriever --> RRF
         RRF --> Context[Context Construction]
+        Tavily --> Context
         Products --> Context
         Context --> Prompt[Prompt Construction]
         Query --> Prompt

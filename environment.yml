@@ -16,3 +16,4 @@ dependencies:
     - streamlit>=1.18
     - faiss-cpu>=1.7
     - python-dotenv>=1.0
+    - tavily-python>=0.3.0
