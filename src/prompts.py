@@ -17,6 +17,7 @@ Always use the following format in your response:
 """
 
 def build_prompt(query, context):
+    """Construct the final prompt by combining system prompt, context, and querya"""
     return f"""{SYSTEM_PROMPT_3}
 Products:
 {context}

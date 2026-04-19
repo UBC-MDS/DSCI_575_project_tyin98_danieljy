@@ -18,6 +18,7 @@ class HybridRetriever:
     """
 
     def __init__(self, vector_store, bm25_index, products, rrf_k=60):
+        """Initialize hybrid retriever with FAISS and BM25 indexes"""
         self.vector_store = vector_store
         self.bm25_index = bm25_index
         self.products = products
