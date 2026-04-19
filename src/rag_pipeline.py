@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from prompts import build_prompt
 from hybrid import HybridRetriever, load_indexes
+from tools import web_search
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -48,8 +49,16 @@ class RAG_Pipeline:
             max_retries=2,
         )
 
+        search_triggers = ["price", "availability", "current", "latest", "newest", "buy", "cost"]
+        web_context = ""
+        if any(word in query.lower() for word in search_triggers):
+            web_context = web_search.invoke(query)
+
         docs = self.retrieve(query, k)
         context = self.build_context(docs)
+        if web_context:
+            context = f"Web Search Results:\n{web_context}\n\nAmazon Catalog Context:\n{context}"
+
         prompt = build_prompt(query, context)
         
         return llm.invoke(prompt).content, docs
