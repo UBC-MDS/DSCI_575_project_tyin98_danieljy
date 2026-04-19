@@ -13,13 +13,16 @@ from langchain_groq import ChatGroq
 
 class RAG_Pipeline:
     def __init__(self, vector_store , products):
+        """Initialize RAG pipeline with a FAISS index and product list"""
         self.vector_store = vector_store
         self.products = products
 
     def retrieve(self, query, k=10):
+        """Return top-k product indices via semantic search"""
         return [idx for idx, score in semantic_retriever(query, self.vector_store, k)]
 
     def build_context(self, docs):
+        """Format a list of product indices into a context string"""
         context_parts = []
         for idx in docs:
             product = self.products[idx]
@@ -35,6 +38,7 @@ class RAG_Pipeline:
         return "\n\n".join(context_parts)
 
     def query(self, query, k=10):
+        """Retrieve docs, build context, and generate answer"""
         # the function that runs the entire RAG pipeline
         if "GROQ_API_KEY" not in os.environ:
             print("GROQ_API_KEY not found. Please add it in the .env file.")
@@ -100,6 +104,7 @@ class HybridRAGPipeline(RAG_Pipeline):
     """
  
     def __init__(self, hybrid_retriever: HybridRetriever):
+        """Initialize hybrid RAG pipeline with a HybridRetriever"""
         # Pass the products list up to the parent so build_context() works as-is.
         # vector_store is not needed directly — the HybridRetriever owns it.
         super().__init__(

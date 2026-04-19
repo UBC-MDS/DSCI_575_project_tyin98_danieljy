@@ -22,6 +22,7 @@ def load_index(input_dir):
     return bm25_index, products
 
 def bm25_retriever(query, bm25_index, k=10):
+    """Return top-k product indices and scores using BM25"""
     tokenized_query = tokenize(query)
     scores = bm25_index.get_scores(tokenized_query)
     ranked_idx = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
