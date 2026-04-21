@@ -1,6 +1,22 @@
+"""Faster version of utils.py for building the product corpus and indexes.
+ 
+Output artifacts (products.pkl, embeddings.pkl, faiss_index/, bm25_index.pkl,
+corpus.pkl) are identical in schema to utils.py — downstream code in semantic.py,
+bm25.py, and hybrid.py does not need to change.
+ 
+Changes vs utils.py:
+- review_matching: vectorized with sort + groupby.head(k) instead of per-row
+  iterrows + heapq; returns {asin: [text, ...]} rather than (votes, text) tuples.
+- Parquet load: reads only the 5 columns actually used downstream.
+- Embedding device: explicit CUDA > MPS > CPU selection (upstream auto-detect
+  skips MPS on some versions, silently falling back to CPU on Apple Silicon).
+- Embedding precision: fp16 on CUDA (~2x faster on tensor cores, quality delta
+  below retrieval noise); fp32 elsewhere since CPU/MPS fp16 is slower or flaky.
+- Embedding batch size: tuned per device (512 CUDA / 128 MPS / 64 CPU) instead
+  of a fixed 256 that can be suboptimal depending on the device.
+"""
 import argparse
 import time
-import heapq
 import pickle
 import re
 import torch
@@ -9,7 +25,6 @@ import pandas as pd
 import numpy as np
 from nltk.stem import SnowballStemmer
 from nltk.corpus import stopwords
-from collections import defaultdict
 from sentence_transformers import SentenceTransformer
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -22,45 +37,36 @@ stop_words = set(stopwords.words('english'))
 stemmer = SnowballStemmer("english")
 
 def tokenize(text):
-    """Lowercase, strip punctuation, remove stop-words, and stem.
+    """Normalize text into BM25-ready tokens.
+
+    Lowercases, strips punctuation (keeps hyphens and alphanumerics), drops
+    English stop-words, and applies Snowball stemming.
 
     Args:
-        text: Raw text string
+        text: Raw text string.
 
     Returns:
-        A list of tokens
+        A list of stemmed tokens suitable for BM25 indexing.
     """
     text = text.lower()
     text = re.sub(r"[^a-z0-9\s-]", "", text)
     return [stemmer.stem(w) for w in text.split() if w not in stop_words]
 
-# def review_matching(review_path, k=3):
-#     """Reads a parquet review file and keeps the k reviews with the most helpful votes per product.
-
-#     Args:
-#         review_path: Path to the reviews parquet file.
-#         k: Number of most helpful reviews to keep per product, default 3
-
-#     Returns:
-#         A dict mapping parent_asin to a list of (votes, text) tuples
-#     """
-#     print(f"Filtering top {k} helpful reviews for all products...")
-#     df = pd.read_parquet(review_path, engine="pyarrow")
-
-#     top_reviews_dict = defaultdict(list)
-#     for _, row in df.iterrows():
-#         asin = row['parent_asin']
-#         votes = row.get('helpful_vote', 0)
-#         # min heap to keep top k reviews
-#         heap = top_reviews_dict[asin]
-#         if len(heap) < k:
-#             heapq.heappush(heap, (votes, row['text']))
-#         else:
-#             heapq.heappushpop(heap, (votes, row['text']))
-#     return top_reviews_dict
-
-# Usinge groupby + nlargest
 def review_matching(review_path, k=3):
+    """Select the top-k most helpful reviews per product from a parquet file.
+
+    Vectorized replacement for the old iterrows+heap version: loads only the
+    needed columns, fills missing helpful_vote with 0, sorts once globally,
+    then takes the first k rows of each parent_asin group.
+
+    Args:
+        review_path: Path to the reviews parquet file.
+        k: Number of top reviews to keep per product, default 3.
+
+    Returns:
+        A dict mapping parent_asin (str) to a list of review text strings,
+        ordered from most to least helpful.
+    """
     df = pd.read_parquet(
         review_path,
         columns=["parent_asin", "helpful_vote", "text"],
@@ -73,16 +79,22 @@ def review_matching(review_path, k=3):
     return top.groupby("parent_asin", sort=False)["text"].agg(list).to_dict()
 
 def build_corpus_index(meta_path, review_path, output_dir, k=3, max_products=None):
-    """Loads product metadata and reviews, creates a corpus containing title, features,
-    description, and top reviews, encodes the corpus with all-MiniLM-L6-v2, and saves
-    everything as pickle files plus a built FAISS index.
+    """Build the semantic corpus and FAISS index from product metadata and reviews.
+
+    Joins each product's title, features, description, and top-k helpful reviews
+    into a single document, encodes the documents with all-MiniLM-L6-v2, and
+    writes three artifacts to output_dir: products.pkl (metadata with reviews
+    attached), embeddings.pkl (raw vectors), and faiss_index/ (FAISS store).
+
+    Uses CUDA+fp16 when available, MPS or CPU with fp32 otherwise; batch size
+    is auto-tuned per device.
 
     Args:
         meta_path: Path to the product metadata parquet file.
         review_path: Path to the reviews parquet file.
         output_dir: Directory where pickle files and the FAISS index will be saved.
         k: Number of top reviews per product, default 3.
-        max_products: If set, only process the first n products.
+        max_products: If set, only process the first n products (useful for dev).
     """
     reviews_dict = review_matching(review_path, k)
 
@@ -157,12 +169,16 @@ Reviews: {reviews}
     return
 
 def build_faiss_index(corpus, embeddings, output_dir):
-    """Create and save a FAISS vector store from corpus text and embeddings.
+    """Persist a FAISS vector store from precomputed embeddings.
+
+    Wraps the corpus texts and embeddings in a LangChain FAISS store, attaching
+    each document's original position as metadata["index"] so retrievers can
+    look up the corresponding product dict later.
 
     Args:
-        corpus: List of strings.
-        embeddings: Generated embedding vectors.
-        output_dir: Directory where the FAISS index will be saved.
+        corpus: List of document strings (parallel to embeddings).
+        embeddings: 2D array-like of shape (len(corpus), embedding_dim).
+        output_dir: Directory where the FAISS index files will be saved.
     """
     print(f"Building FAISS index...")
     embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
@@ -179,11 +195,16 @@ def build_faiss_index(corpus, embeddings, output_dir):
     return
 
 def build_bm25_index(output_dir):
-    """Loads products.pkl, tokenizes each product's title, features, and description, then creates a BM25 index.
-    Saves the index and tokenized corpus to disk.
+    """Build and persist a BM25 keyword index from the pickled product list.
+
+    Reads products.pkl, tokenizes each product's title + features + description
+    with tokenize(), fits a BM25Okapi model, and writes bm25_index.pkl and
+    corpus.pkl to output_dir. Must be run after build_corpus_index(), which
+    produces products.pkl.
 
     Args:
-        output_dir: Directory containing products.pkl and where bm25_index.pkl and corpus.pkl will be saved.
+        output_dir: Directory containing products.pkl and where bm25_index.pkl
+            and corpus.pkl will be written.
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
