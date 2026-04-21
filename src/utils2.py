@@ -3,6 +3,7 @@ import time
 import heapq
 import pickle
 import re
+import torch
 import nltk
 import pandas as pd
 import numpy as np
@@ -58,15 +59,18 @@ def tokenize(text):
 #             heapq.heappushpop(heap, (votes, row['text']))
 #     return top_reviews_dict
 
-# Usinge groupby + nlargest:
+# Usinge groupby + nlargest
 def review_matching(review_path, k=3):
-    df = pd.read_parquet(review_path, columns=["parent_asin", "helpful_vote", "text"])
-    df["helpful_vote"] = df["helpful_vote"].fillna(0)
-    top = (
-        df.groupby("parent_asin", group_keys=False)
-          .apply(lambda g: g.nlargest(k, "helpful_vote"))
+    df = pd.read_parquet(
+        review_path,
+        columns=["parent_asin", "helpful_vote", "text"],
+        engine="pyarrow",
     )
-    return top.groupby("parent_asin")["text"].agg(list).to_dict()
+    df["helpful_vote"] = df["helpful_vote"].fillna(0)
+    # Sort once, then take head(k) per group
+    df = df.sort_values(["parent_asin", "helpful_vote"], ascending=[True, False])
+    top = df.groupby("parent_asin", sort=False).head(k)
+    return top.groupby("parent_asin", sort=False)["text"].agg(list).to_dict()
 
 def build_corpus_index(meta_path, review_path, output_dir, k=3, max_products=None):
     """Loads product metadata and reviews, creates a corpus containing title, features,
@@ -87,7 +91,7 @@ def build_corpus_index(meta_path, review_path, output_dir, k=3, max_products=Non
     # Only load the columns we need, and convert features and description to lists if they are stored as arrays
     df = pd.read_parquet(meta_path, 
                          engine="pyarrow", 
-                         columns=["parent_asin", "title", "features", "description"])
+                         columns=["parent_asin", "title", "features", "description", "average_rating"])
     if max_products:
         df = df.head(max_products)
     products = df.to_dict('records')
@@ -102,7 +106,7 @@ def build_corpus_index(meta_path, review_path, output_dir, k=3, max_products=Non
     corpus = []
     for product in products:
         asin = product['parent_asin']
-        reviews = " ".join(x[1] for x in reviews_dict[asin])
+        reviews = " ".join(reviews_dict[asin])  # 
         part = f"""Title: {product.get("title", "")} |
 Features: {", ".join(product.get("features", []))} |
 Description: {". ".join(product.get("description", []))} |
@@ -115,17 +119,29 @@ Reviews: {reviews}
     with open(output_dir / "products.pkl", "wb") as f:
         pickle.dump(products, f)
 
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    # model = SentenceTransformer("paraphrase-MiniLM-L6-v2") # smaller model = faster
+    # Pick the fastest available device explicitly. SentenceTransformer's
+    # auto-detect doesn't always check for MPS, so Apple Silicon can silently
+    # fall back to CPU. CUDA > MPS > CPU.
+    device = ("cuda" if torch.cuda.is_available()
+              else "mps" if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available()
+              else "cpu")
+    # Batch size tuned per device: big on CUDA (tensor cores love it, VRAM is plenty
+    # for a tiny model), moderate on MPS (unified memory pressure), small on CPU
+    # (fits in L2/L3 cache instead of spilling to main memory).
+    batch_size = {"cuda": 512, "mps": 128, "cpu": 64}[device]
+    
+    model = SentenceTransformer("all-MiniLM-L6-v2", device=device)
+    if device == "cuda":
+        model = model.half()
+    print(f"Generating embeddings on {device} (batch size={batch_size}, "
+          f"precision={'fp16' if device == 'cuda' else 'fp32'})...")
 
-    print("Generating embeddings...")
-    print(f"Using device: {model.device}")
     print("Running this on the full dataset could take hours if you don't have CUDA/MPS.")
     print("Adjust batch size according to RAM/VRAM, and use --max-products to limit amount of products processed")
     start = time.time()
     embeddings = model.encode(
         corpus, 
-        batch_size=256, 
+        batch_size=batch_size, 
         show_progress_bar=True, 
         normalize_embeddings=True
         )
