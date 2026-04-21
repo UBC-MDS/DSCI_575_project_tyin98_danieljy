@@ -3,8 +3,19 @@
 ## Step 1: Improve Your Workflow
 
 ### Dataset Scaling
-- Number of products used
-- Changes to sampling strategy (if any)
+- Number of products used: 
+
+Currently the filtered parquet files contain about ~1,000,000 products. However, when building the indexes for BM25 and semantic search, we would need to use ~5000 products to have things build in less than ~5 minutes. So, we did not change the sampling method, but we focused on improving our utils.py file to be more efficient in generating the indexes for our semantic and BM25 models. 
+
+We created a 'utils2.py' file which focuses on greater efficiency. The following is a summary of the changes relative to 'utils.py':
+
+- review_matching: vectorized with sort + groupby.head(k) instead of per-row iterrows + heapq; returns {asin: [text, ...]} rather than (votes, text) tuples.
+- Parquet load: reads only the 5 columns actually used downstream.
+- Embedding device: explicit CUDA > MPS > CPU selection (upstream auto-detect skips MPS on some versions, silently falling back to CPU on Apple Silicon).
+- Embedding precision: fp16 on CUDA (~2x faster on tensor cores, quality delta below retrieval noise); fp32 elsewhere since CPU/MPS fp16 is slower or flaky.
+- Embedding batch size: tuned per device (512 CUDA / 128 MPS / 64 CPU) instead of a fixed 256 that can be suboptimal depending on the device.
+
+- Changes to sampling strategy (if any): N/A
 
 ### LLM Experiment
 - Models compared (name, family, size)
