@@ -49,22 +49,29 @@ conda env create -f environment.yml
 conda activate dsci575_td
 ```
 3. Setup the index for running the models. Depending on your RAM, this could take a few minutes. You can increase the speed by reducing the number after '--max-products'. 
+
+**More Efficient Index Building**
+```bash
+python src/utils2.py --rebuild --max-products 10000
+```
+
+**Default Index Building**
 ```bash
 python src/utils.py --rebuild --max-products 5000
 ```
 
-4. The RAG pipeline requires a Groq API key and a Tavily API key for web search capabilities. Add them to your .env file:
+1. The RAG pipeline requires a Groq API key and a Tavily API key for web search capabilities. Add them to your .env file:
 ```text
 GROQ_API_KEY=your_groq_key
 TAVILY_API_KEY=your_tavily_key
 ```
 
-5. Run the Streamlit App locally. Click on the URL within the terminal if the window does not open automatically. 
+1. Run the Streamlit App locally. Click on the URL within the terminal if the window does not open automatically. 
 ```bash
 streamlit run app/app.py
 ```
 
-6. Within the app, select whether you want the BM25 or Semantic Search model for regular search or the RAG tab for LLM assisted search. Then, type your query in the search-bar.
+1. Within the app, select whether you want the BM25 or Semantic Search model for regular search or the RAG tab for LLM assisted search. Then, type your query in the search-bar.
 
 ## Web Search Tool Call
 The RAG pipeline have web search capability via Tavily. The pipeline uses the LLM to determine if a query requires web information. If triggered, the web results are combined with the other data for a better answer.
