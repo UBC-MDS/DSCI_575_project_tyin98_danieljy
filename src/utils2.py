@@ -84,11 +84,10 @@ def build_corpus_index(meta_path, review_path, output_dir, k=3, max_products=Non
 
     print("Loading data from parquet...")
 
-    # We only load the columns we need to save memory, and convert features and description to lists if they are stored as arrays
+    # Only load the columns we need, and convert features and description to lists if they are stored as arrays
     df = pd.read_parquet(meta_path, 
                          engine="pyarrow", 
                          columns=["parent_asin", "title", "features", "description"])
-
     if max_products:
         df = df.head(max_products)
     products = df.to_dict('records')
@@ -112,7 +111,7 @@ Reviews: {reviews}
         corpus.append(part)
         product['reviews'] = reviews
 
-    print("pickling product dictionary with reviews...")
+    print("Pickling product dictionary with reviews...")
     with open(output_dir / "products.pkl", "wb") as f:
         pickle.dump(products, f)
 
@@ -133,7 +132,7 @@ Reviews: {reviews}
     elapsed = time.time() - start
     print(f"Embedding generation took {elapsed:.2f} seconds")
 
-    print("pickling generated embeddings...")
+    print("Pickling generated embeddings...")
     with open(output_dir / "embeddings.pkl", "wb") as f:
         pickle.dump(embeddings, f)
     
