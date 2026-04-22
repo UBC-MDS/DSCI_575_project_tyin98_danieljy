@@ -22,7 +22,7 @@ With these changes, we can load 10,000+ products in under 5 minutes using a cpu 
 
 ### LLM Experiment
 
-I compared our current LLM (Qwen3-32B ) and a smaller more lightweight model, Llama-3.1-8B.  The Qwen model has 32 billion parameters and the Llama has 8 billion (so a quarter of the parameters). 
+We compared our current LLM (Qwen3-32B ), a smaller more lightweight model in the Llama-3.1-8B, and the Llama-3.3-70b-versatile model which is more than twice as large as Qwen.  The Qwen model has 32 billion parameters whereas the small Llama has 8 billion (so a quarter of the parameters) and the large Llama model has 70 billion (more than twice as large as Qwen). 
 
 **Results**:
 
