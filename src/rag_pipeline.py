@@ -52,6 +52,23 @@ class RAG_Pipeline:
             timeout=None,
             max_retries=2,
         )
+        # LLM Comparison - smaller model
+        # llm = ChatGroq(
+        #     model="llama-3.1-8b-instant", 
+        #     temperature=0.3,
+        #     max_tokens=None,
+        #     timeout=None,
+        #     max_retries=2,
+        # )
+
+        # LLM Comparison - larger model
+        # llm = ChatGroq(
+        #     model="llama-3.3-70b-versatile",
+        #     temperature=0.3,
+        #     max_tokens=None,
+        #     timeout=None,
+        #     max_retries=2,
+        # )
 
         #search_triggers = ["price", "availability", "current", "latest", "newest", "buy", "cost", "cheap", "cheaper"]
         web_context = ""
