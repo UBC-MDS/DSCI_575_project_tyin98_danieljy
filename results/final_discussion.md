@@ -16,7 +16,7 @@ We created a 'utils2.py' file which focuses on greater efficiency. The following
 - Embedding precision: fp16 on CUDA (~2x faster on tensor cores, quality delta below retrieval noise); fp32 elsewhere since CPU/MPS fp16 is slower or flaky.
 - Embedding batch size: tuned per device (512 CUDA / 128 MPS / 64 CPU) instead of a fixed 256 that can be suboptimal depending on the device.
 
-With these changes, we can load 10,000+ products in under 5 minutes using a cpu and 16GB RAM. On a mid-level GPU, loading the full dataset took about 30 minutes.
+With these changes, we can load 10,000+ products in under 5 minutes using a cpu and 16GB RAM. On a mid-level GPU, building the index using the full dataset took about 30 minutes.
 
 - Changes to sampling strategy (if any): N/A
 
